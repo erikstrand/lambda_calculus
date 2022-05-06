@@ -18,10 +18,15 @@ public:
     TermId make_abstraction(TermId var, TermId body) {
         TermId const idx = construct(std::vector<TermId>{}, Abstraction{var, body});
         LambdaTerm& var_term = operator[](var);
-        if (!var_term.is_variable()) {
-            throw std::runtime_error("Expected variable");
-        }
-        var_term.parents.push_back(idx);
+        var_term.visit(
+            [idx](Variable& variable) {
+                if (variable.abstraction.has_value()) {
+                    throw std::runtime_error("Variable is already bound");
+                }
+                variable.abstraction = idx;
+            },
+            [](auto) { throw std::runtime_error("Expected variable"); }
+        );
         operator[](body).parents.push_back(idx);
         return idx;
     }
