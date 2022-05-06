@@ -1,5 +1,7 @@
 #include "term_reduction.h"
 
+#include <iostream>
+
 namespace lambda {
 
 //..................................................................................................
@@ -42,9 +44,11 @@ TermId copy_and_substitute(
         // Enter this term.
         bool const added_terms_to_stack = term->visit(
             [&](Variable) {
+                std::cout << "entering variable\n";
                 return false;
             },
             [&](Abstraction abstraction) {
+                std::cout << "entering abstraction\n";
                 if (new_terms.contains(term_id)) {
                     return false;
                 }
@@ -52,6 +56,7 @@ TermId copy_and_substitute(
                 return true;
             },
             [&](Application application) {
+                std::cout << "entering application\n";
                 if (new_terms.contains(term_id)) {
                     return false;
                 }
@@ -71,16 +76,19 @@ TermId copy_and_substitute(
             TermId const new_term_id = [&]() {
                 // If this term is the bound variable, perform the substitution.
                 if (term_id == variable_id) {
+                    std::cout << "substituting\n";
                     return argument_id;
                 }
 
                 // If we've already duplicated this term, return the existing copy.
                 auto itr = new_terms.find(term_id);
                 if (itr != new_terms.end()) {
+                    std::cout << "have copy already\n";
                     return itr->second;
                 }
 
                 // Otherwise we have to make a new copy.
+                std::cout << "making copy\n";
                 auto const new_term_id = term->visit(
                     [&](Variable var) {
                         return arena.make_variable(var.name);
@@ -105,6 +113,7 @@ TermId copy_and_substitute(
             // If there is a previous stack element, store the new term id there.
             if (stack.size() > 1) {
                 auto& parent_context = stack[stack.size() - 2];
+                std::cout << "saving new term in slot " << context->idx << '\n';
                 parent_context.new_children[context->idx] = new_term_id;
             }
 
