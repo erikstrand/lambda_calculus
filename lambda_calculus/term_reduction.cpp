@@ -5,11 +5,10 @@
 namespace lambda {
 
 //..................................................................................................
-// Makes a deep copy of the tree starting at root_id, substituting all occurences of the variable
-// variable_id with argument_id.
 TermId copy_and_substitute(
     TermArena& arena,
     TermId root_id,
+    TermId new_root_id,
     TermId variable_id,
     TermId argument_id
 ) {
@@ -88,24 +87,48 @@ TermId copy_and_substitute(
                 }
 
                 // Otherwise we have to make a new copy.
-                std::cout << "making copy\n";
-                auto const new_term_id = term->visit(
-                    [&](Variable var) {
-                        return arena.make_variable(var.name);
-                    },
-                    [&](Abstraction) {
-                        return arena.make_abstraction(
-                            context->new_children[0],
-                            context->new_children[1]
-                        );
-                    },
-                    [&](Application) {
-                        return arena.make_application(
-                            context->new_children[0],
-                            context->new_children[1]
-                        );
-                    }
-                );
+                TermId new_term_id;
+                if (stack.size() > 1) {
+                    std::cout << "making copy\n";
+                    new_term_id = term->visit(
+                        [&](Variable var) {
+                            return arena.make_variable(var.name);
+                        },
+                        [&](Abstraction) {
+                            return arena.make_abstraction(
+                                context->new_children[0],
+                                context->new_children[1]
+                            );
+                        },
+                        [&](Application) {
+                            return arena.make_application(
+                                context->new_children[0],
+                                context->new_children[1]
+                            );
+                        }
+                    );
+                } else {
+                    std::cout << "making copy (in-place)\n";
+                    new_term_id = term->visit(
+                        [&](Variable var) {
+                            return arena.make_variable(new_root_id, var.name);
+                        },
+                        [&](Abstraction) {
+                            return arena.make_abstraction(
+                                new_root_id,
+                                context->new_children[0],
+                                context->new_children[1]
+                            );
+                        },
+                        [&](Application) {
+                            return arena.make_application(
+                                new_root_id,
+                                context->new_children[0],
+                                context->new_children[1]
+                            );
+                        }
+                    );
+                }
                 new_terms.emplace(term_id, new_term_id);
                 return new_term_id;
             }();
