@@ -12,6 +12,7 @@ class TermArena;
 //--------------------------------------------------------------------------------------------------
 class TermId {
 public:
+    TermId() = default;
     uint32_t value() const { return idx; }
 
     bool operator==(TermId rhs) const { return idx == rhs.idx; }

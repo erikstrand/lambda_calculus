@@ -2,6 +2,7 @@
 #include <iostream>
 #include "utils/utf8.h"
 #include "term_arena.h"
+#include "term_serialization.h"
 
 using namespace lambda;
 
@@ -28,4 +29,7 @@ int main() {
     auto const var_y = arena.make_variable("y");
     auto const xy = arena.make_application(var_x, var_y);
     auto const lx_xy = arena.make_abstraction(var_x, xy);
+
+    serialize_term(arena, lx_xy, std::cout);
+    std::cout << '\n';
 }
