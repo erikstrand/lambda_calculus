@@ -33,6 +33,9 @@ inline TermId copy_and_substitute(
     );
 }
 
+//--------------------------------------------------------------------------------------------------
+void beta_reduce(TermArena& arena, TermId term_id);
+
 }
 
 #endif

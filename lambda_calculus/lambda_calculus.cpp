@@ -31,12 +31,11 @@ int main() {
     auto const var_z = arena.make_variable("z");
     auto const xy = arena.make_application(var_x, var_y);
     auto const lx_xy = arena.make_abstraction(var_x, xy);
-    serialize_term(arena, lx_xy, std::cout);
-    std::cout << '\n';
+    auto const term = arena.make_application(lx_xy, var_z);
 
-    auto const lx_xz = copy_and_substitute(arena, lx_xy, var_y, var_z);
-    serialize_term(arena, lx_xz, std::cout);
+    serialize_term(arena, term, std::cout);
     std::cout << '\n';
-    serialize_term(arena, lx_xy, std::cout);
+    beta_reduce(arena, term);
+    serialize_term(arena, term, std::cout);
     std::cout << '\n';
 }

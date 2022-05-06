@@ -160,4 +160,33 @@ TermId copy_and_substitute(
     }
 }
 
+//..................................................................................................
+void beta_reduce(TermArena& arena, TermId term_id) {
+    // Check that the term is an application.
+    LambdaTerm& term = arena[term_id];
+    if (!term.is_applicaton()) {
+        throw std::runtime_error("Only applications can be reduced");
+    }
+    Application& application = term.get_application();
+
+    // Check that the left term is an abstraction.
+    TermId function_id = application.left;
+    LambdaTerm& function = arena[function_id];
+    if (!function.is_abstraction()) {
+        throw std::runtime_error("Only applications of abstractions can be reduced");
+    }
+    Abstraction& abstraction = function.get_abstraction();
+
+    // Generate the new term.
+    // We make a deep copy of the tree (really DAG) underneath body_id. The copy of body_id itself
+    // is created in place: it's data (i.e. variable, abstraction, or application info) replaces the
+    // application info of term_id, but we leave term_id's parents in place.
+    TermId body_id = abstraction.body;
+    TermId variable_id = abstraction.variable;
+    TermId argument_id = application.right;
+    copy_and_substitute(arena, body_id, term_id, variable_id, argument_id);
+    function.remove_parent(term_id);
+    arena[argument_id].remove_parent(term_id);
+}
+
 }
