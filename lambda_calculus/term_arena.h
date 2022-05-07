@@ -32,6 +32,16 @@ public:
     LambdaTerm& operator[](TermId idx) { return pool_[idx.value()]; }
     LambdaTerm const& operator[](TermId idx) const { return pool_[idx.value()]; }
 
+    // Replaces old_id with new_id. Specifically, all the parents of old_id are remapped to point to
+    // new_id, and new_id has its parent list updated accordingly. The parent list of old_id is
+    // cleared. This method works for any type of term.
+    void replace_term(TermId old_id, TermId new_id);
+
+    // Replaces old_id with new_id. Specifically, all the children of old_id are cut loose, and
+    // replaced with those of new_term. The parents of old_id remain intact. This method expects
+    // old_id to be an application, since I only use this during beta reduction.
+    void replace_application(TermId old_id, LambdaTerm new_term);
+
 private:
     template <class... Args>
     TermId construct(Args&&... args) {
@@ -41,8 +51,8 @@ private:
     }
 
     void bind_variable(TermId variable_id, TermId abstraction_id) {
-        LambdaTerm& var_term = operator[](variable_id);
-        var_term.visit(
+        LambdaTerm& variable_term = operator[](variable_id);
+        variable_term.visit(
             [abstraction_id](Variable& variable) {
                 if (variable.abstraction.has_value()) {
                     throw std::runtime_error("Variable is already bound");

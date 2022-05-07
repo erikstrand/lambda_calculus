@@ -14,7 +14,8 @@ void remap_parents(TermArena& arena, TermId old_id, TermId new_id);
 //--------------------------------------------------------------------------------------------------
 // Walks down the tree starting at root_id, substituting all occurences of variable_id with
 // argument_id. Portions of the tree that don't depend on variable_id are re-used; those that do are
-// duplicated.
+// duplicated. Note that if the returned result is a LambdaTerm, its children don't know that it is
+// their parent (since it doesn't yet have an id).
 std::variant<TermId, LambdaTerm> substitute(
     TermArena& arena,
     TermId root_id,

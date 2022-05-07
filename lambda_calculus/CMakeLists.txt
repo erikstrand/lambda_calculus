@@ -2,6 +2,7 @@ add_executable(
     lambda_calculus
     lambda_calculus.cpp
     utils/utf8.cpp
+    term_arena.cpp
     term_reduction.cpp
     term_serialization.cpp
 )

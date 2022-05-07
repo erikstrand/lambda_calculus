@@ -8,47 +8,6 @@
 namespace lambda {
 
 //..................................................................................................
-void remap_parents(TermArena& arena, TermId old_id, TermId new_id) {
-    LambdaTerm& old_term = arena[old_id];
-    uint32_t const n_parents = old_term.parents.size();
-    if (n_parents == 0) {
-        return;
-    }
-
-    // This helper method remaps a single parent.
-    auto const remap_parent = [&arena, old_id, new_id](TermId parent_id) {
-        LambdaTerm& parent = arena[parent_id];
-        parent.visit(
-            [](Variable) {
-                throw std::runtime_error("A variable cannot be a parent");
-            },
-            [old_id, new_id](Abstraction& abstraction) {
-                if (abstraction.body == old_id) {
-                    abstraction.body = new_id;
-                }
-            },
-            [old_id, new_id](Application& application) {
-                if (application.left == old_id) {
-                    application.left = new_id;
-                }
-                if (application.right == old_id) {
-                    application.right = new_id;
-                }
-            }
-        );
-    };
-
-    // Note: if there are duplicate parents here we could skip them.
-    // This would be easy if we kept our parent lists sorted.
-    for (TermId parent_id : old_term.parents) {
-        remap_parent(parent_id);
-    }
-
-    // Remve the parents of the old term.
-    old_term.parents.clear();
-}
-
-//..................................................................................................
 std::variant<TermId, LambdaTerm> substitute(
     TermArena& arena,
     TermId root_id,
@@ -259,11 +218,6 @@ TermId beta_reduce(TermArena& arena, TermId term_id) {
     TermId body_id = abstraction.body;
     TermId variable_id = abstraction.variable;
 
-    // Disconnect the function and argument from the application (since it will be replaced).
-    // Note: it's possible that the function and argument are the same term.
-    function.remove_parent(term_id);
-    arena[argument_id].remove_parent(term_id);
-
     // Perform the substitution and splice in the new node.
     std::variant<TermId, LambdaTerm> new_root =
         substitute(arena, body_id, variable_id, argument_id);
@@ -272,12 +226,12 @@ TermId beta_reduce(TermArena& arena, TermId term_id) {
         [&](TermId new_id) {
             // If the new root is an existing node, we remap the current node to it.
             // Note: if we start tracking memory more closely, we could free term_id here.
-            remap_parents(arena, term_id, new_id);
+            arena.replace_term(term_id, new_id);
             return new_id;
         },
         [&](LambdaTerm new_term) {
             // If the root node is a new node, we reuse the current node.
-            term.data = new_term.data;
+            arena.replace_application(term_id, new_term);
             return term_id;
         }
     );
