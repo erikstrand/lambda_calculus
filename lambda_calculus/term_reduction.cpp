@@ -92,8 +92,12 @@ std::variant<TermId, LambdaTerm> substitute(
 
             // Enter this term.
             bool const added_terms_to_stack = term->visit(
-                [&](Variable) {
-                    std::cout << "entering variable\n";
+                [&](Variable var_tmp) {
+                    std::cout << "entering variable (";
+                    if (!var_tmp.abstraction.has_value()) {
+                        std::cout << "un";
+                    }
+                    std::cout << "bound)\n";
                     return false;
                 },
                 [&](Abstraction abstraction) {
@@ -129,33 +133,35 @@ std::variant<TermId, LambdaTerm> substitute(
                 AnnotatedTerm const new_term = [&]() {
                     // If this term is the bound variable, perform the substitution.
                     if (term_id == variable_id) {
-                        std::cout << "substituting\n";
+                        std::cout << "  substituting\n";
                         return AnnotatedTerm{argument_id, true};
                     }
 
                     // If we've already covered this term, return the existing copy.
                     auto itr = new_terms.find(term_id);
                     if (itr != new_terms.end()) {
-                        std::cout << "have copy already\n";
+                        std::cout << "  have copy (or re-used node) already\n";
                         return itr->second;
                     }
 
                     // Otherwise we have to make a new copy.
-                    std::cout << "making copy\n";
                     AnnotatedTerm new_term = term->visit(
                         [term_id](Variable) {
                             // This isn't the bound variable, so it can't depend on the argument.
+                            std::cout << "  re-using variable\n";
                             return AnnotatedTerm{term_id, false};
                         },
                         [&](Abstraction) {
                             AnnotatedTerm child_0 = context->new_children[0];
                             AnnotatedTerm child_1 = context->new_children[1];
                             if (child_0.is_new || child_1.is_new) {
+                                std::cout << "  duplicating abstraction\n";
                                 return AnnotatedTerm{
                                     arena.make_abstraction(child_0.id, child_1.id),
                                     true
                                 };
                             } else {
+                                std::cout << "  re-using abstraction\n";
                                 return AnnotatedTerm{term_id, false};
                             }
                         },
@@ -163,11 +169,13 @@ std::variant<TermId, LambdaTerm> substitute(
                             AnnotatedTerm child_0 = context->new_children[0];
                             AnnotatedTerm child_1 = context->new_children[1];
                             if (child_0.is_new || child_1.is_new) {
+                                std::cout << "  duplicating application\n";
                                 return AnnotatedTerm{
                                     arena.make_application(child_0.id, child_1.id),
                                     true
                                 };
                             } else {
+                                std::cout << "  re-using application\n";
                                 return AnnotatedTerm{term_id, false};
                             }
                         }
@@ -178,7 +186,6 @@ std::variant<TermId, LambdaTerm> substitute(
 
                 // Store the resulting term one level up the stack.
                 auto& parent_context = stack[stack.size() - 2];
-                std::cout << "saving new term in slot " << context->idx << '\n';
                 parent_context.new_children[context->idx] = new_term;
 
                 // If this term has more siblings, move to the next one.
@@ -204,14 +211,17 @@ std::variant<TermId, LambdaTerm> substitute(
     auto const context = stack.back();
     return arena[root_id].visit(
         [=](Variable) -> std::variant<TermId, LambdaTerm> {
+            std::cout << "  re-using variable (root)\n";
             return (root_id == variable_id) ? argument_id : root_id;
         },
         [=](Abstraction) -> std::variant<TermId, LambdaTerm> {
             AnnotatedTerm child_0 = context.new_children[0];
             AnnotatedTerm child_1 = context.new_children[1];
             if (child_0.is_new || child_1.is_new) {
+                std::cout << "  duplicating abstraction (root)\n";
                 return LambdaTerm{{}, Abstraction{child_0.id, child_1.id}};
             } else {
+                std::cout << "  re-using abstraction (root)\n";
                 return root_id;
             }
         },
@@ -219,8 +229,10 @@ std::variant<TermId, LambdaTerm> substitute(
             AnnotatedTerm child_0 = context.new_children[0];
             AnnotatedTerm child_1 = context.new_children[1];
             if (child_0.is_new || child_1.is_new) {
+                std::cout << "  duplicating application (root)\n";
                 return LambdaTerm{{}, Application{child_0.id, child_1.id}};
             } else {
+                std::cout << "  re-using application (root)\n";
                 return root_id;
             }
         }
