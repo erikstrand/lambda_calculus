@@ -1,6 +1,7 @@
 #include "term_reduction.h"
 #include "utils/stdint.h"
 #include "utils/visit.h"
+#include <unordered_set>
 
 #include <iostream>
 
@@ -268,6 +269,89 @@ TermId beta_reduce(TermArena& arena, TermId term_id) {
             return term_id;
         }
     );
+}
+
+//..................................................................................................
+TermId reduce_normal_order(TermArena& arena, TermId root_id) {
+    struct StackEntry {
+        StackEntry(TermId term): children{term, TermId{}}, size{1}, idx{0} {}
+        StackEntry(TermId left, TermId right): children{left, right}, size{2}, idx{0} {}
+
+        std::array<TermId, 2> children;
+        uint32_t size;
+        uint32_t idx;
+    };
+
+    std::vector<StackEntry> stack;
+    stack.emplace_back(root_id);
+
+    auto const get_term_id = [&stack](uint32_t depth) -> TermId {
+        return stack[depth].children[stack[depth].idx];
+    };
+
+    // This stores all terms that have been fully reduced, so we know not to traverse them again.
+    std::unordered_set<TermId> reduced_terms;
+
+    while (true) {
+        TermId term_id = get_term_id(stack.size() - 1);
+
+        if (!reduced_terms.contains(term_id)) {
+            // Enter this term, and add its children (if any) to the stack.
+            bool const modified_stack = arena[term_id].visit(
+                [&](Variable) {
+                    return false;
+                },
+                [&](Abstraction abstraction) {
+                    stack.emplace_back(abstraction.body);
+                    return true;
+                },
+                [&](Application application) {
+                    // If this term is a redex, reduce it.
+                    if (arena[application.left].is_abstraction()) {
+                        term_id = beta_reduce(arena, term_id);
+                        // It's possible that our parent is now a redex.
+                        stack.pop_back();
+                        if (stack.size() == 0) {
+                            stack.emplace_back(term_id);
+                        }
+                        return true;
+                    }
+
+                    // Otherwise, continue walking down.
+                    stack.emplace_back(application.left, application.right);
+                    return true;
+                }
+            );
+
+            // If we modified the stack, go down (or up) one level.
+            if (modified_stack) {
+                continue;
+            }
+        }
+
+        // Otherwise we need to backtrack.
+        while (true) {
+            // We have reduced everything below here.
+            reduced_terms.insert(term_id);
+
+            // If this term has more siblings, move to the next one.
+            ++stack.back().idx;
+            if (stack.back().idx < stack.back().size) {
+                // This means it was an application.
+                // We want a space between the left and right terms.
+                break;
+            }
+
+            // If this is the last node in the stack, we're done.
+            if (stack.size() == 1) {
+                return term_id;
+            }
+
+            // Otherwise go up a level.
+            stack.pop_back();
+            term_id = get_term_id(stack.size() - 1);
+        }
+    }
 }
 
 }

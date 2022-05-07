@@ -25,6 +25,9 @@ std::variant<TermId, LambdaTerm> substitute(
 //--------------------------------------------------------------------------------------------------
 TermId beta_reduce(TermArena& arena, TermId term_id);
 
+//--------------------------------------------------------------------------------------------------
+TermId reduce_normal_order(TermArena& arena, TermId root_id);
+
 }
 
 #endif

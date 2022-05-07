@@ -33,7 +33,7 @@ int main() {
 
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
-    term = beta_reduce(arena, term);
+    term = reduce_normal_order(arena, term);
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
 }
