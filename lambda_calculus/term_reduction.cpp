@@ -42,6 +42,21 @@ std::variant<TermId, LambdaTerm> substitute(
     // the tree beneath root_id) to that of the duplicate.
     std::unordered_map<TermId, AnnotatedTerm> new_terms;
 
+    // TODO
+    // I need two passes. In the first I build an array of all "dirty" nodes (those that will need
+    // to be duplicated). I should ignore bound variables; they are basically part of their lambdas.
+    // The interesting thing is that this makes them a non-local source of dirtiness. If anything
+    // inside a lambda uses the outer bound variable, then the lambda needs to be duplicated, and
+    // the new lambda needs its own bound variable. So all structures inside the old lambda that
+    // depend on that bound variable are now dirty as well.
+    // Hm so I guess really first I'm just detecting dirtiness with respect to the outer bound
+    // variable. In the second pass I have to expand the definition to include terms that are dirty
+    // with respect to the duplicated inner bound variables.
+    //
+    // In the second pass I do what I do here. Just I identify dirtiness sources using the
+    // unordered_map I built in the first pass, instead of wherever the outer bound variable
+    // appears.
+
     // This helper method traverses the tree.
     auto const traverse = [&]() {
         while (true) {
