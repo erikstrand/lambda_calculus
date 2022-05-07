@@ -28,12 +28,12 @@ int main() {
 
     auto const var_x = arena.make_variable("x");
     auto const var_y = arena.make_variable("y");
-    auto const lx_xy = arena.make_abstraction(var_x, var_x);
-    auto const term = arena.make_application(lx_xy, var_y);
+    auto const lx_x = arena.make_abstraction(var_x, var_x);
+    auto term = arena.make_application(lx_x, var_y);
 
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
-    beta_reduce(arena, term);
+    term = beta_reduce(arena, term);
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
 }
