@@ -42,6 +42,34 @@ int main() {
         return arena.make_abstraction(var_t, lambda_f);
     }();
 
+    auto const pair_combinator = [&arena]() {
+        auto const var_t0 = arena.make_variable("t0");
+        auto const var_t1 = arena.make_variable("t1");
+        auto const var_b = arena.make_variable("b");
+        auto term = arena.make_application(var_b, var_t0);
+        term = arena.make_application(term, var_t1);
+        term = arena.make_abstraction(var_b, term);
+        term = arena.make_abstraction(var_t1, term);
+        return arena.make_abstraction(var_t0, term);
+    }();
+
+    auto const make_pair = [&arena, pair_combinator](TermId first, TermId second) {
+        auto term = arena.make_application(pair_combinator, first);
+        return arena.make_application(term, second);
+    };
+
+    auto const first_combinator = [&arena, true_combinator]() {
+        auto const var_p = arena.make_variable("p");
+        auto term = arena.make_application(var_p, true_combinator);
+        return arena.make_abstraction(var_p, term);
+    }();
+
+    auto const second_combinator = [&arena, false_combinator]() {
+        auto const var_p = arena.make_variable("p");
+        auto term = arena.make_application(var_p, false_combinator);
+        return arena.make_abstraction(var_p, term);
+    }();
+
     auto const make_church_numeral = [&arena](uint32_t n) {
         auto const var_s = arena.make_variable("s");
         auto const var_z = arena.make_variable("z");
@@ -103,13 +131,18 @@ int main() {
         return arena.make_abstraction(var_n, term);
     }();
 
-    auto term = arena.make_application(is_zero_combinator, church_zero);
-    std::cout << "is_zero 0: " << TermPrinter(arena, term) << '\n';
-    term = reduce_normal_order(arena, term);
-    std::cout << "is_zero 0: " << TermPrinter(arena, term) << '\n';
+    auto pair = make_pair(make_church_numeral(2), make_church_numeral(3));
+    std::cout << "pair: " << TermPrinter(arena, pair) << '\n';
+    pair = reduce_normal_order(arena, pair);
+    std::cout << "pair: " << TermPrinter(arena, pair) << '\n';
 
-    term = arena.make_application(is_zero_combinator, make_church_numeral(3));
-    std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
+    auto term = arena.make_application(first_combinator, pair);
+    std::cout << "first: " << TermPrinter(arena, term) << '\n';
     term = reduce_normal_order(arena, term);
-    std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
+    std::cout << "first: " << TermPrinter(arena, term) << '\n';
+
+    term = arena.make_application(second_combinator, pair);
+    std::cout << "second: " << TermPrinter(arena, term) << '\n';
+    term = reduce_normal_order(arena, term);
+    std::cout << "second: " << TermPrinter(arena, term) << '\n';
 }
