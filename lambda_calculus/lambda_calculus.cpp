@@ -177,17 +177,41 @@ int main() {
         return arena.make_abstraction(var_n, term);
     }();
 
-    std::cout << "pred: " << TermPrinter(arena, pred_combinator) << '\n';
-    //auto const simplified_pred = reduce_normal_order(arena, pred_combinator);
-    //std::cout << "simple pred: " << TermPrinter(arena, simplified_pred) << '\n';
-    auto term = make_church_numeral(3);
-    std::cout << "3: " << TermPrinter(arena, term) << '\n';
-    auto const var_s = arena.make_variable("s");
-    auto const var_z = arena.make_variable("z");
-    term = arena.make_application(pred_combinator, term);
-    term = arena.make_application(term, var_s);
-    term = arena.make_application(term, var_z);
-    std::cout << "pred 3: " << TermPrinter(arena, term) << '\n';
+    auto const y_combinator = [&arena]() {
+        auto const var_f = arena.make_variable("f");
+        auto const var_x = arena.make_variable("x");
+        auto term = arena.make_application(var_x, var_x);
+        term = arena.make_application(var_f, term);
+        term = arena.make_abstraction(var_x, term);
+        term = arena.make_application(term, term);
+        return arena.make_abstraction(var_f, term);
+    }();
+
+    auto term = arena.make_application(is_zero_combinator, church_zero);
+    std::cout << "is_zero 0: " << TermPrinter(arena, term) << '\n';
     term = reduce_normal_order(arena, term);
-    std::cout << "pred 3: " << TermPrinter(arena, term) << '\n';
+    std::cout << "is_zero 0: " << TermPrinter(arena, term) << '\n';
+
+    term = arena.make_application(is_zero_combinator, make_church_numeral(3));
+    std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
+    term = reduce_normal_order(arena, term);
+    std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
+
+    std::cout << "Y combinator: ";
+    serialize_term(arena, y_combinator, std::cout);
+    std::cout << '\n';
+
+    auto const var_g = arena.make_variable("g");
+    term = arena.make_application(y_combinator, var_g);
+    std::cout << "Y combinator applied to g: " << TermPrinter(arena, y_combinator) << '\n';
+
+    // diverges
+    term = reduce_normal_order(arena, y_combinator, 1);
+    std::cout << "Y combinator applied to g: " << TermPrinter(arena, term) << '\n';
+    term = reduce_normal_order(arena, y_combinator, 1);
+    std::cout << "Y combinator applied to g: " << TermPrinter(arena, term) << '\n';
+    term = reduce_normal_order(arena, y_combinator, 1);
+    std::cout << "Y combinator applied to g: " << TermPrinter(arena, term) << '\n';
+    term = reduce_normal_order(arena, y_combinator, 1);
+    std::cout << "Y combinator applied to g: " << TermPrinter(arena, term) << '\n';
 }
