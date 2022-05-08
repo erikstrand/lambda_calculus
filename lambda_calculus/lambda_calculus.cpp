@@ -80,7 +80,7 @@ int main() {
     };
 
     //auto const var_x = arena.make_variable("x");
-    auto term = church_sum(church_one, church_one);
+    auto term = church_sum(make_church_numeral(2), make_church_numeral(3));
 
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
