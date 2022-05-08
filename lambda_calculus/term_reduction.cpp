@@ -106,17 +106,6 @@ std::variant<TermId, LambdaTerm> substitute(
     TermId variable_id,
     TermId argument_id
 ) {
-    auto const direct_dependencies = find_terms_with_bound_variable(arena, root_id, variable_id);
-    std::cout << "direct dependencies on " << arena[variable_id].get_variable().name << ":\n";
-    for (TermId term_id : direct_dependencies) {
-        arena[term_id].visit(
-            [](Variable var) { std::cout << "  variable " << var.name << '\n'; },
-            [](Abstraction) { std::cout << "  abstraction" << '\n'; },
-            [](Application) { std::cout << "  application" << '\n'; }
-        );
-    }
-    std::cout << '\n';
-
     struct AnnotatedTerm {
         TermId id;
         bool is_new; // true when we made a new node, false when id points to an existing node
@@ -141,72 +130,63 @@ std::variant<TermId, LambdaTerm> substitute(
     std::vector<StackEntry> stack;
     stack.emplace_back(root_id);
 
-    // This stores all terms that have been duplicated. It mpas the original TermId (as used in the
+    // This stores all terms that have been duplicated. It maps the original TermId (as used in the
     // the tree beneath root_id) to that of the duplicate.
     std::unordered_map<TermId, AnnotatedTerm> new_terms;
 
-    // TODO
-    // I need two passes. In the first I build an array of all "dirty" nodes (those that will need
-    // to be duplicated). I should ignore bound variables; they are basically part of their lambdas.
-    // The interesting thing is that this makes them a non-local source of dirtiness. If anything
-    // inside a lambda uses the outer bound variable, then the lambda needs to be duplicated, and
-    // the new lambda needs its own bound variable. So all structures inside the old lambda that
-    // depend on that bound variable are now dirty as well.
-    // Hm so I guess really first I'm just detecting dirtiness with respect to the outer bound
-    // variable. In the second pass I have to expand the definition to include terms that are dirty
-    // with respect to the duplicated inner bound variables.
-    //
-    // In the second pass I do what I do here. Just I identify dirtiness sources using the
-    // unordered_map I built in the first pass, instead of wherever the outer bound variable
-    // appears.
+    // Traverse the tree to find terms that directly depend on the variable_id.
+    // TODO We really only need to know about abstractions.
+    std::unordered_set<TermId> const direct_dependencies =
+        find_terms_with_bound_variable(arena, root_id, variable_id);
 
-    // This helper method traverses the tree.
-    auto const traverse = [&]() {
+    // Traverse the tree, performing substitutions.
+    // The nodes in direct_dependencies all have to be duplicated. So do any nodes that depend on
+    // the bound variables of any abstractions in direct_dependencies (these are indirect
+    // dependencies). Remaining nodes can be safely re-used.
+    // (This is wrapped in a lambda so I can use return for control flow within the nested loops.)
+    [&]() {
         while (true) {
             StackEntry* context = &stack.back();
             TermId term_id = context->terms[context->idx];
             LambdaTerm* term = &arena[term_id];
 
             // Enter this term.
-            bool const added_terms_to_stack = term->visit(
-                [&](Variable var_tmp) {
-                    std::cout << "entering variable (";
-                    if (!var_tmp.abstraction.has_value()) {
-                        std::cout << "un";
-                    }
-                    std::cout << "bound)\n";
-                    return false;
-                },
-                [&](Abstraction abstraction) {
-                    std::cout << "entering abstraction\n";
-                    if (new_terms.contains(term_id)) {
+            if (!new_terms.contains(term_id)) {
+                bool const added_terms_to_stack = term->visit(
+                    [&](Variable var_tmp) {
+                        std::cout << "entering variable (";
+                        if (!var_tmp.abstraction.has_value()) {
+                            std::cout << "un";
+                        }
+                        std::cout << "bound)\n";
                         return false;
+                    },
+                    [&](Abstraction abstraction) {
+                        std::cout << "entering abstraction\n";
+                        stack.emplace_back(abstraction.variable, abstraction.body);
+                        return true;
+                    },
+                    [&](Application application) {
+                        std::cout << "entering application\n";
+                        stack.emplace_back(application.left, application.right);
+                        return true;
                     }
-                    stack.emplace_back(abstraction.variable, abstraction.body);
-                    return true;
-                },
-                [&](Application application) {
-                    std::cout << "entering application\n";
-                    if (new_terms.contains(term_id)) {
-                        return false;
-                    }
-                    stack.emplace_back(application.left, application.right);
-                    return true;
-                }
-            );
+                );
 
-            // If this term has children, go down one level.
-            if (added_terms_to_stack) {
-                continue;
+                // If this term has children, go down one level.
+                if (added_terms_to_stack) {
+                    continue;
+                }
             }
 
             // Otherwise we need to backtrack.
             while (true) {
+                // We will handle the last node differently, so we check completion before leaving.
                 if (stack.size() == 1) {
                     return;
                 }
 
-                // Leave this term. This is when we create the duplicate node (if needed).
+                // Leave this term. This is when we create the duplicate node if needed.
                 AnnotatedTerm const new_term = [&]() {
                     // If this term is the bound variable, perform the substitution.
                     if (term_id == variable_id) {
@@ -223,10 +203,22 @@ std::variant<TermId, LambdaTerm> substitute(
 
                     // Otherwise we have to make a new copy.
                     AnnotatedTerm new_term = term->visit(
-                        [term_id](Variable) {
-                            // This isn't the bound variable, so it can't depend on the argument.
-                            std::cout << "  re-using variable\n";
-                            return AnnotatedTerm{term_id, false};
+                        [&](Variable variable) {
+                            // If this is a bound variable, and its lambda depends (directly) on
+                            // variable_id, then anything that depends on this variable also depends
+                            // (indirectly) on variable_id.
+                            // TODO: If lambdas knew what free variables (in their contexts) they
+                            // referenced, we wouldn't need to do the extra traversal.
+                            if (
+                                variable.abstraction.has_value() &&
+                                direct_dependencies.contains(variable.abstraction.value())
+                            ) {
+                                std::cout << "  duplicating variable\n";
+                                return AnnotatedTerm{arena.make_variable(variable.name), true};
+                            } else {
+                                std::cout << "  re-using variable\n";
+                                return AnnotatedTerm{term_id, false};
+                            }
                         },
                         [&](Abstraction) {
                             AnnotatedTerm child_0 = context->new_children[0];
@@ -278,16 +270,14 @@ std::variant<TermId, LambdaTerm> substitute(
                 term = &arena[term_id];
             }
         }
-    };
-
-    // Do the traverse.
-    traverse();
+    }();
 
     // Build the final node. This is different from what we do inside traverse(), since if we have
     // to construct a node we don't do it inside the arena.
     auto const context = stack.back();
     return arena[root_id].visit(
         [=](Variable) -> std::variant<TermId, LambdaTerm> {
+            // Note that the root node cannot be a variable bound by another lambda.
             std::cout << "  re-using variable (root)\n";
             return (root_id == variable_id) ? argument_id : root_id;
         },
