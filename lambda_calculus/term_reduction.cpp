@@ -86,6 +86,9 @@ std::unordered_set<TermId> find_terms_with_bound_variable(
             // If this term has more siblings, move to the next one.
             ++stack.back().idx;
             if (stack.back().idx < stack.back().size) {
+                // Reset our state.
+                stack.back().depends_on_bound_variable[0] = false;
+                stack.back().depends_on_bound_variable[1] = false;
                 break;
             }
 
