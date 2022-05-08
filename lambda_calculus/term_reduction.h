@@ -2,14 +2,19 @@
 #define LAMBDA_TERM_REDUCTION_H
 
 #include "term_arena.h"
+#include <unordered_set>
 
 namespace lambda {
 
 //--------------------------------------------------------------------------------------------------
-// Remaps the parents of old_id so they point to new_id (wherever they used to point to old_id).
-// Only works if old_id is an abstraction or application. (If it were a variable we'd also have to
-// consider its owning abstraction as a parent.)
-void remap_parents(TermArena& arena, TermId old_id, TermId new_id);
+// Walks down the tree starting at root_id, collecting all terms that directly depend on
+// variable_id. Bound variables of inner lambdas are not added along with their abstractions, so a
+// second pass is needed to propagate up these indirect dependencies.
+std::unordered_set<TermId> find_terms_with_bound_variable(
+    TermArena const& arena,
+    TermId root_id,
+    TermId variable_id
+);
 
 //--------------------------------------------------------------------------------------------------
 // Walks down the tree starting at root_id, substituting all occurences of variable_id with

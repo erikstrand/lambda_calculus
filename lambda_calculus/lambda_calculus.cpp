@@ -21,7 +21,7 @@ int main() {
         pos = next_utf8_codepoint(pos);
         ++length;
     }
-    std::cout << "length (code points): " << length << '\n';
+    std::cout << "length (code points): " << length << "\n\n";
 
     TermArena arena;
     arena.reserve(2048);

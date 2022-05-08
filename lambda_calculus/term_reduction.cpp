@@ -1,11 +1,103 @@
 #include "term_reduction.h"
 #include "utils/stdint.h"
 #include "utils/visit.h"
-#include <unordered_set>
 
 #include <iostream>
 
 namespace lambda {
+
+//..................................................................................................
+std::unordered_set<TermId> find_terms_with_bound_variable(
+    TermArena const& arena,
+    TermId root_id,
+    TermId variable_id
+) {
+    struct StackEntry {
+        StackEntry(TermId term):
+            terms{term, TermId{}},
+            depends_on_bound_variable{false, false},
+            size{1},
+            idx{0}
+        {}
+        StackEntry(TermId left, TermId right):
+            terms{left, right},
+            depends_on_bound_variable{false, false},
+            size{2},
+            idx{0}
+        {}
+
+        std::array<TermId, 2> terms;
+        std::array<bool, 2> depends_on_bound_variable;
+        uint32_t size;
+        uint32_t idx;
+    };
+
+    std::vector<StackEntry> stack;
+    stack.emplace_back(root_id);
+
+    std::unordered_set<TermId> visited;
+    std::unordered_set<TermId> result;
+
+    while (true) {
+        TermId term_id = stack.back().terms[stack.back().idx];
+
+        if (!visited.contains(term_id)) {
+            // Enter this term, and add its children (if any) to the stack.
+            bool const added_terms_to_stack = arena[term_id].visit(
+                [&](Variable) {
+                    return false;
+                },
+                [&](Abstraction abstraction) {
+                    stack.emplace_back(abstraction.body);
+                    return true;
+                },
+                [&](Application application) {
+                    stack.emplace_back(application.left, application.right);
+                    return true;
+                }
+            );
+
+            // If this term has children, go down one level.
+            if (added_terms_to_stack) {
+                continue;
+            }
+        }
+
+        // Otherwise we need to backtrack.
+        while (true) {
+            visited.insert(term_id);
+            if (
+                term_id == variable_id ||
+                // These default to false, so it's fine to check both even if we have one child.
+                stack.back().depends_on_bound_variable[0] ||
+                stack.back().depends_on_bound_variable[1]
+            ) {
+                result.insert(term_id);
+                if (stack.size() > 1) {
+                    // Store the depency one level up the stack.
+                    auto& this_context = stack[stack.size() - 1];
+                    auto& parent_context = stack[stack.size() - 2];
+                    parent_context.depends_on_bound_variable[this_context.idx] = true;
+                }
+            }
+
+            // If this term has more siblings, move to the next one.
+            ++stack.back().idx;
+            if (stack.back().idx < stack.back().size) {
+                break;
+            }
+
+            // If this is the last element on the stack, we're done.
+            if (stack.size() == 1) {
+                return result;
+            }
+
+            // Otherwise go up a level.
+            stack.pop_back();
+            term_id = stack.back().terms[stack.back().idx];
+        }
+    }
+}
 
 //..................................................................................................
 std::variant<TermId, LambdaTerm> substitute(
@@ -14,6 +106,17 @@ std::variant<TermId, LambdaTerm> substitute(
     TermId variable_id,
     TermId argument_id
 ) {
+    auto const direct_dependencies = find_terms_with_bound_variable(arena, root_id, variable_id);
+    std::cout << "direct dependencies on " << arena[variable_id].get_variable().name << ":\n";
+    for (TermId term_id : direct_dependencies) {
+        arena[term_id].visit(
+            [](Variable var) { std::cout << "  variable " << var.name << '\n'; },
+            [](Abstraction) { std::cout << "  abstraction" << '\n'; },
+            [](Application) { std::cout << "  application" << '\n'; }
+        );
+    }
+    std::cout << '\n';
+
     struct AnnotatedTerm {
         TermId id;
         bool is_new; // true when we made a new node, false when id points to an existing node
