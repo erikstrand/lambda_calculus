@@ -59,7 +59,7 @@ int main() {
     auto const church_zero = make_church_numeral(0);
     auto const church_one = make_church_numeral(1);
 
-    auto const plus_combinator = [&arena]() {
+    auto const addition_combinator = [&arena]() {
         auto const var_m = arena.make_variable("m");
         auto const var_n = arena.make_variable("n");
         auto const var_s = arena.make_variable("s");
@@ -74,18 +74,41 @@ int main() {
         return arena.make_abstraction(var_m, term);
     }();
 
-    auto const church_sum = [&arena, plus_combinator](TermId m, TermId n) {
-        auto term = arena.make_application(plus_combinator, m);
+    auto const church_sum = [&arena, addition_combinator](TermId m, TermId n) {
+        auto term = arena.make_application(addition_combinator, m);
         return arena.make_application(term, n);
     };
 
-    //auto const var_x = arena.make_variable("x");
-    auto term = church_sum(make_church_numeral(2), make_church_numeral(3));
+    auto const multiplication_combinator = [&arena, addition_combinator, church_zero]() {
+        auto const var_m = arena.make_variable("m");
+        auto const var_n = arena.make_variable("n");
+        auto term = arena.make_application(addition_combinator, var_n);
+        term = arena.make_application(var_m, term);
+        term = arena.make_application(term, church_zero);
+        term = arena.make_abstraction(var_n, term);
+        return arena.make_abstraction(var_m, term);
+    }();
 
+    auto const church_product = [&arena, multiplication_combinator](TermId m, TermId n) {
+        auto term = arena.make_application(multiplication_combinator, m);
+        return arena.make_application(term, n);
+    };
+
+    std::cout << "Addition combinator: ";
+    serialize_term(arena, addition_combinator, std::cout);
+    std::cout << '\n';
+
+    std::cout << "Multiplication combinator: ";
+    serialize_term(arena, multiplication_combinator, std::cout);
+    std::cout << '\n';
+
+    auto term = church_product(make_church_numeral(2), make_church_numeral(3));
+    std::cout << "2 x 3: ";
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
 
     term = reduce_normal_order(arena, term);
+    std::cout << "2 x 3 reduced: ";
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
 }
