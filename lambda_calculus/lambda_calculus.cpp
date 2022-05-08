@@ -28,6 +28,8 @@ int main() {
     TermArena arena;
     arena.reserve(2048);
 
+    // We represent true as the function of two variables that returns the first argument.
+    // λt. λf. t
     auto const true_combinator = [&arena]() {
         auto const var_t = arena.make_variable("t");
         auto const var_f = arena.make_variable("f");
@@ -35,6 +37,8 @@ int main() {
         return arena.make_abstraction(var_t, lambda_f);
     }();
 
+    // We represent false as the function of two variables that returns the second argument.
+    // λt. λf. f
     auto const false_combinator = [&arena]() {
         auto const var_t = arena.make_variable("t");
         auto const var_f = arena.make_variable("f");
@@ -42,6 +46,17 @@ int main() {
         return arena.make_abstraction(var_t, lambda_f);
     }();
 
+    // We can implement control flow by passing two different computations to a boolean.
+    // true_combinator true_branch false_branch = true_branch
+    // false_combinator true_branch false_branch = false_branch
+    auto const if_then_else = [&arena](TermId condition, TermId true_branch, TermId false_branch) {
+        auto term = arena.make_application(condition, true_branch);
+        return arena.make_application(term, false_branch);
+    };
+
+    // Similarly, thinking of terms as data, a pair lets us package two terms up as one and select
+    // between them later.
+    // λt0. λt1. λb. b t0 t1
     auto const pair_combinator = [&arena]() {
         auto const var_t0 = arena.make_variable("t0");
         auto const var_t1 = arena.make_variable("t1");
@@ -57,19 +72,15 @@ int main() {
         auto term = arena.make_application(pair_combinator, first);
         return arena.make_application(term, second);
     };
+    auto const get_first = [&arena, true_combinator](TermId pair) {
+        return arena.make_application(pair, true_combinator);
+    };
+    auto const get_second = [&arena, false_combinator](TermId pair) {
+        return arena.make_application(pair, false_combinator);
+    };
 
-    auto const first_combinator = [&arena, true_combinator]() {
-        auto const var_p = arena.make_variable("p");
-        auto term = arena.make_application(var_p, true_combinator);
-        return arena.make_abstraction(var_p, term);
-    }();
-
-    auto const second_combinator = [&arena, false_combinator]() {
-        auto const var_p = arena.make_variable("p");
-        auto term = arena.make_application(var_p, false_combinator);
-        return arena.make_abstraction(var_p, term);
-    }();
-
+    // The natural number n is represented as the function of two arguments that applies the first
+    // to the second n times.
     auto const make_church_numeral = [&arena](uint32_t n) {
         auto const var_s = arena.make_variable("s");
         auto const var_z = arena.make_variable("z");
