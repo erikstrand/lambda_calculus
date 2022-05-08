@@ -21,19 +21,32 @@ int main() {
         pos = next_utf8_codepoint(pos);
         ++length;
     }
-    std::cout << "length (code points): " << length << '\n';
+    std::cout << "length (code points): " << length << "\n\n";
 
     TermArena arena;
     arena.reserve(2048);
 
+    auto const true_lambda = [&arena]() {
+        auto const var_t = arena.make_variable("t");
+        auto const var_f = arena.make_variable("f");
+        auto const lambda_f = arena.make_abstraction(var_f, var_t);
+        return arena.make_abstraction(var_t, lambda_f);
+    }();
+
+    auto const false_lambda = [&arena]() {
+        auto const var_t = arena.make_variable("t");
+        auto const var_f = arena.make_variable("f");
+        auto const lambda_f = arena.make_abstraction(var_f, var_f);
+        return arena.make_abstraction(var_t, lambda_f);
+    }();
+
     auto const var_x = arena.make_variable("x");
-    auto const var_y = arena.make_variable("y");
-    auto const lx_xy = arena.make_abstraction(var_x, var_x);
-    auto const term = arena.make_application(lx_xy, var_y);
+    auto term = arena.make_application(true_lambda, var_x);
 
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
-    beta_reduce(arena, term);
+
+    term = reduce_normal_order(arena, term);
     serialize_term(arena, term, std::cout);
     std::cout << '\n';
 }
