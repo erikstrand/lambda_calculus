@@ -2,8 +2,6 @@
 #include "utils/stdint.h"
 #include "utils/visit.h"
 
-#include <iostream>
-
 namespace lambda {
 
 //..................................................................................................
@@ -153,21 +151,14 @@ std::variant<TermId, LambdaTerm> substitute(
             // Enter this term.
             if (!new_terms.contains(term_id)) {
                 bool const added_terms_to_stack = term->visit(
-                    [&](Variable var_tmp) {
-                        std::cout << "entering variable (";
-                        if (!var_tmp.abstraction.has_value()) {
-                            std::cout << "un";
-                        }
-                        std::cout << "bound)\n";
+                    [](Variable) {
                         return false;
                     },
                     [&](Abstraction abstraction) {
-                        std::cout << "entering abstraction\n";
                         stack.emplace_back(abstraction.variable, abstraction.body);
                         return true;
                     },
                     [&](Application application) {
-                        std::cout << "entering application\n";
                         stack.emplace_back(application.left, application.right);
                         return true;
                     }
@@ -190,14 +181,12 @@ std::variant<TermId, LambdaTerm> substitute(
                 AnnotatedTerm const new_term = [&]() {
                     // If this term is the bound variable, perform the substitution.
                     if (term_id == variable_id) {
-                        std::cout << "  substituting\n";
                         return AnnotatedTerm{argument_id, true};
                     }
 
                     // If we've already covered this term, return the existing copy.
                     auto itr = new_terms.find(term_id);
                     if (itr != new_terms.end()) {
-                        std::cout << "  have copy (or re-used node) already\n";
                         return itr->second;
                     }
 
@@ -213,10 +202,8 @@ std::variant<TermId, LambdaTerm> substitute(
                                 variable.abstraction.has_value() &&
                                 direct_dependencies.contains(variable.abstraction.value())
                             ) {
-                                std::cout << "  duplicating variable\n";
                                 return AnnotatedTerm{arena.make_variable(variable.name), true};
                             } else {
-                                std::cout << "  re-using variable\n";
                                 return AnnotatedTerm{term_id, false};
                             }
                         },
@@ -224,13 +211,11 @@ std::variant<TermId, LambdaTerm> substitute(
                             AnnotatedTerm child_0 = context->new_children[0];
                             AnnotatedTerm child_1 = context->new_children[1];
                             if (child_0.is_new || child_1.is_new) {
-                                std::cout << "  duplicating abstraction\n";
                                 return AnnotatedTerm{
                                     arena.make_abstraction(child_0.id, child_1.id),
                                     true
                                 };
                             } else {
-                                std::cout << "  re-using abstraction\n";
                                 return AnnotatedTerm{term_id, false};
                             }
                         },
@@ -238,13 +223,11 @@ std::variant<TermId, LambdaTerm> substitute(
                             AnnotatedTerm child_0 = context->new_children[0];
                             AnnotatedTerm child_1 = context->new_children[1];
                             if (child_0.is_new || child_1.is_new) {
-                                std::cout << "  duplicating application\n";
                                 return AnnotatedTerm{
                                     arena.make_application(child_0.id, child_1.id),
                                     true
                                 };
                             } else {
-                                std::cout << "  re-using application\n";
                                 return AnnotatedTerm{term_id, false};
                             }
                         }
@@ -278,17 +261,14 @@ std::variant<TermId, LambdaTerm> substitute(
     return arena[root_id].visit(
         [=](Variable) -> std::variant<TermId, LambdaTerm> {
             // Note that the root node cannot be a variable bound by another lambda.
-            std::cout << "  re-using variable (root)\n";
             return (root_id == variable_id) ? argument_id : root_id;
         },
         [=](Abstraction) -> std::variant<TermId, LambdaTerm> {
             AnnotatedTerm child_0 = context.new_children[0];
             AnnotatedTerm child_1 = context.new_children[1];
             if (child_0.is_new || child_1.is_new) {
-                std::cout << "  duplicating abstraction (root)\n";
                 return LambdaTerm{{}, Abstraction{child_0.id, child_1.id}};
             } else {
-                std::cout << "  re-using abstraction (root)\n";
                 return root_id;
             }
         },
@@ -296,10 +276,8 @@ std::variant<TermId, LambdaTerm> substitute(
             AnnotatedTerm child_0 = context.new_children[0];
             AnnotatedTerm child_1 = context.new_children[1];
             if (child_0.is_new || child_1.is_new) {
-                std::cout << "  duplicating application (root)\n";
                 return LambdaTerm{{}, Application{child_0.id, child_1.id}};
             } else {
-                std::cout << "  re-using application (root)\n";
                 return root_id;
             }
         }
