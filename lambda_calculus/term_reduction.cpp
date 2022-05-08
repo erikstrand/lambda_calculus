@@ -324,7 +324,11 @@ TermId beta_reduce(TermArena& arena, TermId term_id) {
 }
 
 //..................................................................................................
-TermId reduce_normal_order(TermArena& arena, TermId root_id) {
+TermId reduce_normal_order(
+    TermArena& arena,
+    TermId root_id,
+    std::optional<uint32_t> max_reductions
+) {
     struct StackEntry {
         StackEntry(TermId term): children{term, TermId{}}, size{1}, idx{0} {}
         StackEntry(TermId left, TermId right): children{left, right}, size{2}, idx{0} {}
@@ -344,6 +348,7 @@ TermId reduce_normal_order(TermArena& arena, TermId root_id) {
     // This stores all terms that have been fully reduced, so we know not to traverse them again.
     std::unordered_set<TermId> reduced_terms;
 
+    uint32_t n_reductions = 0;
     while (true) {
         TermId term_id = get_term_id(stack.size() - 1);
 
@@ -361,6 +366,7 @@ TermId reduce_normal_order(TermArena& arena, TermId root_id) {
                     // If this term is a redex, reduce it.
                     if (arena[application.left].is_abstraction()) {
                         term_id = beta_reduce(arena, term_id);
+                        ++n_reductions;
                         // It's possible that our parent is now a redex.
                         stack.pop_back();
                         if (stack.size() == 0) {
@@ -374,6 +380,11 @@ TermId reduce_normal_order(TermArena& arena, TermId root_id) {
                     return true;
                 }
             );
+
+            // Return if we've reached the limit.
+            if (max_reductions.has_value() && n_reductions == max_reductions.value()) {
+                return term_id;
+            }
 
             // If we modified the stack, go down (or up) one level.
             if (modified_stack) {

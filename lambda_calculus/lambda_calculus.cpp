@@ -105,11 +105,11 @@ int main() {
 
     auto term = arena.make_application(is_zero_combinator, church_zero);
     std::cout << "is_zero 0: " << TermPrinter(arena, term) << '\n';
-    term = reduce_normal_order(arena, term);
+    term = reduce_normal_order(arena, term, 1);
     std::cout << "is_zero 0: " << TermPrinter(arena, term) << '\n';
 
     term = arena.make_application(is_zero_combinator, make_church_numeral(3));
     std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
-    term = reduce_normal_order(arena, term);
-    std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
+    //term = reduce_normal_order(arena, term);
+    //std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
 }
