@@ -30,7 +30,7 @@ int main() {
 
     // We represent true as the function of two variables that returns the first argument.
     // λt. λf. t
-    auto const true_combinator = [&arena]() {
+    TermId const true_combinator = [&arena]() {
         auto const var_t = arena.make_variable("t");
         auto const var_f = arena.make_variable("f");
         auto const lambda_f = arena.make_abstraction(var_f, var_t);
@@ -39,7 +39,7 @@ int main() {
 
     // We represent false as the function of two variables that returns the second argument.
     // λt. λf. f
-    auto const false_combinator = [&arena]() {
+    TermId const false_combinator = [&arena]() {
         auto const var_t = arena.make_variable("t");
         auto const var_f = arena.make_variable("f");
         auto const lambda_f = arena.make_abstraction(var_f, var_f);
@@ -98,6 +98,22 @@ int main() {
     auto const church_zero = make_church_numeral(0);
     auto const church_one = make_church_numeral(1);
 
+    // To get the successor of a natural number, we just need to apply s one more time.
+    // λn. λs. λz. s (n s z)
+    auto const succ_combinator = [&arena]() {
+        auto const var_n = arena.make_variable("n");
+        auto const var_s = arena.make_variable("s");
+        auto const var_z = arena.make_variable("z");
+        auto term = arena.make_application(var_n, var_s);
+        term = arena.make_application(term, var_z);
+        term = arena.make_application(var_s, term);
+        term = arena.make_abstraction(var_z, term);
+        term = arena.make_abstraction(var_s, term);
+        return arena.make_abstraction(var_n, term);
+    }();
+
+    // More generally, to add two numbers, we can plug one in as the "zero" of another.
+    // λm. λn. λs. λz. (m s) (n s z)
     auto const addition_combinator = [&arena]() {
         auto const var_m = arena.make_variable("m");
         auto const var_n = arena.make_variable("n");
@@ -133,6 +149,25 @@ int main() {
         return arena.make_application(term, n);
     };
 
+    auto const pred_combinator = [=, &arena]() {
+        // This function takes a pair of numbers (n, m) and returns a pair (m, m + 1).
+        // If we apply our helper function n times starting with (0, 0), we will get (n - 1, n).
+        auto const var_p = arena.make_variable("p");
+        auto const second = get_second(var_p);
+        auto helper_function = arena.make_abstraction(
+            var_p,
+            make_pair(
+                second,
+                arena.make_application(succ_combinator, second))
+        );
+
+        auto const var_n = arena.make_variable("n");
+        auto term = arena.make_application(var_n, helper_function);
+        term = arena.make_application(term, make_pair(church_zero, church_zero));
+        term = get_first(term);
+        return arena.make_abstraction(var_n, term);
+    }();
+
     auto const is_zero_combinator = [&arena, true_combinator, false_combinator]() {
         auto const var_n = arena.make_variable("n");
         auto const var_x = arena.make_variable("x");
@@ -142,18 +177,17 @@ int main() {
         return arena.make_abstraction(var_n, term);
     }();
 
-    auto pair = make_pair(make_church_numeral(2), make_church_numeral(3));
-    std::cout << "pair: " << TermPrinter(arena, pair) << '\n';
-    pair = reduce_normal_order(arena, pair);
-    std::cout << "pair: " << TermPrinter(arena, pair) << '\n';
-
-    auto term = arena.make_application(first_combinator, pair);
-    std::cout << "first: " << TermPrinter(arena, term) << '\n';
+    std::cout << "pred: " << TermPrinter(arena, pred_combinator) << '\n';
+    //auto const simplified_pred = reduce_normal_order(arena, pred_combinator);
+    //std::cout << "simple pred: " << TermPrinter(arena, simplified_pred) << '\n';
+    auto term = make_church_numeral(3);
+    std::cout << "3: " << TermPrinter(arena, term) << '\n';
+    auto const var_s = arena.make_variable("s");
+    auto const var_z = arena.make_variable("z");
+    term = arena.make_application(pred_combinator, term);
+    term = arena.make_application(term, var_s);
+    term = arena.make_application(term, var_z);
+    std::cout << "pred 3: " << TermPrinter(arena, term) << '\n';
     term = reduce_normal_order(arena, term);
-    std::cout << "first: " << TermPrinter(arena, term) << '\n';
-
-    term = arena.make_application(second_combinator, pair);
-    std::cout << "second: " << TermPrinter(arena, term) << '\n';
-    term = reduce_normal_order(arena, term);
-    std::cout << "second: " << TermPrinter(arena, term) << '\n';
+    std::cout << "pred 3: " << TermPrinter(arena, term) << '\n';
 }
