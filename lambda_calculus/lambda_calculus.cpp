@@ -223,4 +223,6 @@ int main() {
     std::cout << '\n';
     term = step_by_step(arena.make_application(full_func, make_church_numeral(3)), "full_func 3");
     std::cout << '\n';
+
+    std::cout << "n total terms: " << arena.size() << '\n';
 }

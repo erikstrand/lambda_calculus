@@ -9,7 +9,8 @@ namespace lambda {
 //--------------------------------------------------------------------------------------------------
 class TermArena {
 public:
-    void reserve(uint32_t capacity) { pool_.reserve(capacity); }
+    void reserve(std::size_t capacity) { pool_.reserve(capacity); }
+    std::size_t size() const { return pool_.size(); }
 
     TermId make_variable(std::string_view name) {
         return construct(std::vector<TermId>{}, Variable{name});
