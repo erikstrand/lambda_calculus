@@ -202,18 +202,18 @@ int main() {
         arena.make_application(var_f, arena.make_application(pred_combinator, var_n))
     );
     term = arena.make_abstraction(var_n, term);
-    //auto const partial_func = arena.make_abstraction(var_f, term);
+    auto const partial_func = arena.make_abstraction(var_f, term);
 
     //term = arena.make_application(y_combinator, term);
     //term = arena.make_application(term, make_church_numeral(2));
 
-    //term = arena.make_application(partial_func, identity);
+    term = arena.make_application(partial_func, identity);
     //term = arena.make_application(term, church_zero);
 
-    term = arena.make_application(term, church_zero);
-
-    for (uint32_t i = 0; i < 10; ++i) {
-        std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
-        term = reduce_normal_order(arena, term, 1);
-    }
+    term = reduce_normal_order(arena, arena.make_application(term, church_zero));
+    std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
+    term = reduce_normal_order(arena, arena.make_application(term, church_one));
+    std::cout << "inner func 1: " << TermPrinter(arena, term) << "\n\n";
+    term = reduce_normal_order(arena, arena.make_application(term, make_church_numeral(2)));
+    std::cout << "inner func 2: " << TermPrinter(arena, term) << "\n\n";
 }
