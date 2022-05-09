@@ -386,7 +386,7 @@ TermId reduce_normal_order(
 
             // Return if we've reached the limit.
             if (max_reductions.has_value() && n_reductions == max_reductions.value()) {
-                return term_id;
+                return stack.front().children[0];
             }
 
             // If we modified the stack, go down (or up) one level.
