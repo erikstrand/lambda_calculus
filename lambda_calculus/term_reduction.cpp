@@ -330,6 +330,7 @@ TermId beta_reduce(TermArena& arena, TermId term_id) {
 TermId reduce_normal_order(
     TermArena& arena,
     TermId root_id,
+    uint32_t& n_reductions,
     std::optional<uint32_t> max_reductions
 ) {
     struct StackEntry {
@@ -351,7 +352,7 @@ TermId reduce_normal_order(
     // This stores all terms that have been fully reduced, so we know not to traverse them again.
     std::unordered_set<TermId> reduced_terms;
 
-    uint32_t n_reductions = 0;
+    n_reductions = 0;
     while (true) {
         TermId term_id = get_term_id(stack.size() - 1);
 

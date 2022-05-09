@@ -36,8 +36,19 @@ TermId beta_reduce(TermArena& arena, TermId term_id);
 TermId reduce_normal_order(
     TermArena& arena,
     TermId root_id,
+    uint32_t& n_reductions,
     std::optional<uint32_t> max_reductions = {}
 );
+
+//--------------------------------------------------------------------------------------------------
+inline TermId reduce_normal_order(
+    TermArena& arena,
+    TermId root_id,
+    std::optional<uint32_t> max_reductions = {}
+) {
+    uint32_t n_reductions;
+    return reduce_normal_order(arena, root_id, n_reductions, max_reductions);
+}
 
 }
 

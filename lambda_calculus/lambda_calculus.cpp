@@ -192,8 +192,6 @@ int main() {
         return arena.make_abstraction(var_f, term);
     }();
 
-    std::cout << "Y combinator: " << TermPrinter(arena, y_combinator) << '\n';
-
     auto const var_f = arena.make_variable("f");
     auto const var_n = arena.make_variable("n");
     auto term = if_then_else(
@@ -203,17 +201,26 @@ int main() {
     );
     term = arena.make_abstraction(var_n, term);
     auto const partial_func = arena.make_abstraction(var_f, term);
+    auto const full_func = arena.make_application(y_combinator, partial_func);
 
-    //term = arena.make_application(y_combinator, term);
-    //term = arena.make_application(term, make_church_numeral(2));
+    auto const step_by_step = [&arena](TermId root_id, std::string name) {
+        uint32_t total_reductions = 0;
+        uint32_t n_reductions;
+        std::cout << name << '\n';
+        do {
+            std::cout << "step " << total_reductions << ": " << TermPrinter(arena, root_id) << "\n\n";
+            root_id = reduce_normal_order(arena, root_id, n_reductions, 1);
+            ++total_reductions;
+        } while (n_reductions != 0);
+        return root_id;
+    };
 
-    auto tmp = arena.make_application(partial_func, identity);
-    //term = arena.make_application(term, church_zero);
-
-    term = reduce_normal_order(arena, arena.make_application(tmp, church_zero));
-    std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
-    term = reduce_normal_order(arena, arena.make_application(tmp, church_one));
-    std::cout << "inner func 1: " << TermPrinter(arena, term) << "\n\n";
-    term = reduce_normal_order(arena, arena.make_application(tmp, make_church_numeral(2)));
-    std::cout << "inner func 2: " << TermPrinter(arena, term) << "\n\n";
+    term = step_by_step(arena.make_application(full_func, church_zero), "full_func 0");
+    std::cout << '\n';
+    term = step_by_step(arena.make_application(full_func, church_one), "full_func 1");
+    std::cout << '\n';
+    term = step_by_step(arena.make_application(full_func, make_church_numeral(2)), "full_func 2");
+    std::cout << '\n';
+    term = step_by_step(arena.make_application(full_func, make_church_numeral(3)), "full_func 3");
+    std::cout << '\n';
 }
