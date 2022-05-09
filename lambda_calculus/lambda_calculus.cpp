@@ -197,13 +197,11 @@ int main() {
     auto const var_f = arena.make_variable("f");
     auto const var_n = arena.make_variable("n");
     auto term = if_then_else(
-        //arena.make_application(is_zero_combinator, var_n),
-        true_combinator,
+        arena.make_application(is_zero_combinator, var_n),
         church_zero,
-        //arena.make_application(var_f, arena.make_application(pred_combinator, var_n))
-        arena.make_application(var_f, var_n)
+        arena.make_application(var_f, arena.make_application(pred_combinator, var_n))
     );
-    //term = arena.make_abstraction(var_n, term);
+    term = arena.make_abstraction(var_n, term);
     //auto const partial_func = arena.make_abstraction(var_f, term);
 
     //term = arena.make_application(y_combinator, term);
@@ -212,7 +210,7 @@ int main() {
     //term = arena.make_application(partial_func, identity);
     //term = arena.make_application(term, church_zero);
 
-    //term = arena.make_application(term, church_zero);
+    term = arena.make_application(term, church_zero);
 
     for (uint32_t i = 0; i < 10; ++i) {
         std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
