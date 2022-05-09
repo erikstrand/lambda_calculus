@@ -207,13 +207,13 @@ int main() {
     //term = arena.make_application(y_combinator, term);
     //term = arena.make_application(term, make_church_numeral(2));
 
-    term = arena.make_application(partial_func, identity);
+    auto tmp = arena.make_application(partial_func, identity);
     //term = arena.make_application(term, church_zero);
 
-    //term = reduce_normal_order(arena, arena.make_application(term, church_zero));
-    //std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
-    term = reduce_normal_order(arena, arena.make_application(term, church_one));
+    term = reduce_normal_order(arena, arena.make_application(tmp, church_zero));
+    std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
+    term = reduce_normal_order(arena, arena.make_application(tmp, church_one));
     std::cout << "inner func 1: " << TermPrinter(arena, term) << "\n\n";
-    term = reduce_normal_order(arena, arena.make_application(term, make_church_numeral(2)));
+    term = reduce_normal_order(arena, arena.make_application(tmp, make_church_numeral(2)));
     std::cout << "inner func 2: " << TermPrinter(arena, term) << "\n\n";
 }
