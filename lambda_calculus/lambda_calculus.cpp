@@ -210,8 +210,8 @@ int main() {
     term = arena.make_application(partial_func, identity);
     //term = arena.make_application(term, church_zero);
 
-    term = reduce_normal_order(arena, arena.make_application(term, church_zero));
-    std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
+    //term = reduce_normal_order(arena, arena.make_application(term, church_zero));
+    //std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
     term = reduce_normal_order(arena, arena.make_application(term, church_one));
     std::cout << "inner func 1: " << TermPrinter(arena, term) << "\n\n";
     term = reduce_normal_order(arena, arena.make_application(term, make_church_numeral(2)));
