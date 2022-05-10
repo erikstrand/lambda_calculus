@@ -192,16 +192,27 @@ int main() {
         return arena.make_abstraction(var_f, term);
     }();
 
-    auto const var_f = arena.make_variable("f");
-    auto const var_n = arena.make_variable("n");
-    auto term = if_then_else(
-        arena.make_application(is_zero_combinator, var_n),
-        church_zero,
-        arena.make_application(var_f, arena.make_application(pred_combinator, var_n))
-    );
-    term = arena.make_abstraction(var_n, term);
-    auto const partial_func = arena.make_abstraction(var_f, term);
-    auto const full_func = arena.make_application(y_combinator, partial_func);
+    auto const factorial = [=, &arena]() {
+        // First we make the helper function.
+        auto const var_f = arena.make_variable("f");
+        auto const var_n = arena.make_variable("n");
+        auto helper = if_then_else(
+            arena.make_application(is_zero_combinator, var_n),
+            church_one,
+            church_product(
+                var_n,
+                arena.make_application(
+                    var_f,
+                    arena.make_application(pred_combinator, var_n)
+                )
+            )
+        );
+        helper = arena.make_abstraction(var_n, helper);
+        helper = arena.make_abstraction(var_f, helper);
+
+        // The factorial is the fixed point of the helper function.
+        return arena.make_application(y_combinator, helper);
+    }();
 
     auto const step_by_step = [&arena](TermId root_id, std::string name) {
         uint32_t total_reductions = 0;
@@ -215,14 +226,18 @@ int main() {
         return root_id;
     };
 
-    term = step_by_step(arena.make_application(full_func, church_zero), "full_func 0");
-    std::cout << '\n';
-    term = step_by_step(arena.make_application(full_func, church_one), "full_func 1");
-    std::cout << '\n';
-    term = step_by_step(arena.make_application(full_func, make_church_numeral(2)), "full_func 2");
-    std::cout << '\n';
-    term = step_by_step(arena.make_application(full_func, make_church_numeral(3)), "full_func 3");
-    std::cout << '\n';
+    auto const all_at_once = [&arena](TermId root_id, std::string name) {
+        uint32_t total_reductions;
+        root_id = reduce_normal_order(arena, root_id, total_reductions);
+        std::cout << name << " (" << total_reductions << " steps): "
+            << TermPrinter(arena, root_id) << "\n\n";
+    };
+
+    all_at_once(arena.make_application(factorial, church_zero), "factorial 0");
+    all_at_once(arena.make_application(factorial, church_one), "factorial 1");
+    all_at_once(arena.make_application(factorial, make_church_numeral(2)), "factorial 2");
+    all_at_once(arena.make_application(factorial, make_church_numeral(3)), "factorial 3");
+    all_at_once(arena.make_application(factorial, make_church_numeral(4)), "factorial 4");
 
     std::cout << "n total terms: " << arena.size() << '\n';
 }
