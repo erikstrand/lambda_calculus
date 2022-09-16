@@ -210,6 +210,7 @@ int main() {
         return arena.make_abstraction(var_n, term);
     }();
 
+    // λf. (λx. f x x) (λx. f x x)
     auto const y_combinator = [&arena]() {
         auto const var_f = arena.make_variable("f");
         auto const var_x = arena.make_variable("x");
