@@ -84,6 +84,34 @@ int main() {
         return arena.make_application(pair, false_combinator);
     };
 
+    // By making pairs of pairs, we can construct lists.
+    auto const cons = make_pair;
+    auto const head = get_first;
+    auto const tail = get_second;
+    // The tricky part is reliably detecting empty lists. Since we've already chosen how to encode
+    // lists, let's come up with a combinator that returns false when applied to any list. We can
+    // achieve this by passing a function to the list that eats two arguments and returns false.
+    // λl. l (λh. λt. false)
+    auto const empty_list_combinator = [&arena, false_combinator]() {
+        auto const var_l = arena.make_variable("l"); // the list
+        auto const var_h = arena.make_variable("h"); // head of the list
+        auto const var_t = arena.make_variable("t"); // tail of the list
+        auto term = arena.make_abstraction(var_t, false_combinator);
+        term = arena.make_abstraction(var_h, term);
+        term = arena.make_application(var_l, term);
+        return arena.make_abstraction(var_l, term);
+    }();
+    auto const list_is_empty = [&arena, empty_list_combinator](TermId list) {
+        return arena.make_application(empty_list_combinator, list);
+    };
+    // We need to define nil so that empty_list_combinator nil = true.
+    // We can do this by ignoring an argument and returning true.
+    // λx. true
+    auto const nil = [&arena, true_combinator]() {
+        auto const var_x = arena.make_variable("x");
+        return arena.make_abstraction(var_x, true_combinator);
+    }();
+
     // The natural number n is represented as the function of two arguments that applies the first
     // to the second n times.
     auto const make_church_numeral = [&arena](uint32_t n) {
@@ -232,6 +260,12 @@ int main() {
         std::cout << name << " (" << total_reductions << " steps): "
             << TermPrinter(arena, root_id) << "\n\n";
     };
+
+    all_at_once(list_is_empty(nil), "is_empty(nil)");
+    auto const list_1_nil = cons(make_church_numeral(1), nil);
+    all_at_once(list_is_empty(list_1_nil), "is_empty(cons(1, nil))");
+    all_at_once(head(list_1_nil), "head(cons(1, nil))");
+    all_at_once(tail(list_1_nil), "tail(cons(1, nil))");
 
     all_at_once(arena.make_application(factorial, church_zero), "factorial 0");
     all_at_once(arena.make_application(factorial, church_one), "factorial 1");
