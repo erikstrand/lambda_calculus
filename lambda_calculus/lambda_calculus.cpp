@@ -94,21 +94,22 @@ int main() {
         return arena.make_application(term, n);
     };
 
-    std::cout << "Addition combinator: ";
-    serialize_term(arena, addition_combinator, std::cout);
-    std::cout << '\n';
+    auto const is_zero_combinator = [&arena, true_combinator, false_combinator]() {
+        auto const var_n = arena.make_variable("n");
+        auto const var_x = arena.make_variable("x");
+        auto term = arena.make_abstraction(var_x, false_combinator);
+        term = arena.make_application(var_n, term);
+        term = arena.make_application(term, true_combinator);
+        return arena.make_abstraction(var_n, term);
+    }();
 
-    std::cout << "Multiplication combinator: ";
-    serialize_term(arena, multiplication_combinator, std::cout);
-    std::cout << '\n';
-
-    auto term = church_product(make_church_numeral(2), make_church_numeral(3));
-    std::cout << "2 x 3: ";
-    serialize_term(arena, term, std::cout);
-    std::cout << '\n';
-
+    auto term = arena.make_application(is_zero_combinator, church_zero);
+    std::cout << "is_zero 0: " << TermPrinter(arena, term) << '\n';
     term = reduce_normal_order(arena, term);
-    std::cout << "2 x 3 reduced: ";
-    serialize_term(arena, term, std::cout);
-    std::cout << '\n';
+    std::cout << "is_zero 0: " << TermPrinter(arena, term) << '\n';
+
+    term = arena.make_application(is_zero_combinator, make_church_numeral(3));
+    std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
+    term = reduce_normal_order(arena, term);
+    std::cout << "is_zero 3: " << TermPrinter(arena, term) << '\n';
 }

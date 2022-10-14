@@ -3,6 +3,7 @@
 
 #include "term_arena.h"
 #include <unordered_set>
+#include <optional>
 
 namespace lambda {
 
@@ -32,7 +33,11 @@ std::variant<TermId, LambdaTerm> substitute(
 TermId beta_reduce(TermArena& arena, TermId term_id);
 
 //--------------------------------------------------------------------------------------------------
-TermId reduce_normal_order(TermArena& arena, TermId root_id);
+TermId reduce_normal_order(
+    TermArena& arena,
+    TermId root_id,
+    std::optional<uint32_t> max_reductions = {}
+);
 
 }
 
