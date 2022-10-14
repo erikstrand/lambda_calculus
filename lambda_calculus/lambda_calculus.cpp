@@ -28,6 +28,11 @@ int main() {
     TermArena arena;
     arena.reserve(2048);
 
+    TermId const identity = [&arena]() {
+        auto const var_x = arena.make_variable("x");
+        return arena.make_abstraction(var_x, var_x);
+    }();
+
     // We represent true as the function of two variables that returns the first argument.
     // λt. λf. t
     TermId const true_combinator = [&arena]() {
@@ -177,17 +182,38 @@ int main() {
         return arena.make_abstraction(var_n, term);
     }();
 
-    std::cout << "pred: " << TermPrinter(arena, pred_combinator) << '\n';
-    //auto const simplified_pred = reduce_normal_order(arena, pred_combinator);
-    //std::cout << "simple pred: " << TermPrinter(arena, simplified_pred) << '\n';
-    auto term = make_church_numeral(3);
-    std::cout << "3: " << TermPrinter(arena, term) << '\n';
-    auto const var_s = arena.make_variable("s");
-    auto const var_z = arena.make_variable("z");
-    term = arena.make_application(pred_combinator, term);
-    term = arena.make_application(term, var_s);
-    term = arena.make_application(term, var_z);
-    std::cout << "pred 3: " << TermPrinter(arena, term) << '\n';
-    term = reduce_normal_order(arena, term);
-    std::cout << "pred 3: " << TermPrinter(arena, term) << '\n';
+    auto const y_combinator = [&arena]() {
+        auto const var_f = arena.make_variable("f");
+        auto const var_x = arena.make_variable("x");
+        auto term = arena.make_application(var_x, var_x);
+        term = arena.make_application(var_f, term);
+        term = arena.make_abstraction(var_x, term);
+        term = arena.make_application(term, term);
+        return arena.make_abstraction(var_f, term);
+    }();
+
+    std::cout << "Y combinator: " << TermPrinter(arena, y_combinator) << '\n';
+
+    auto const var_f = arena.make_variable("f");
+    auto const var_n = arena.make_variable("n");
+    auto term = if_then_else(
+        arena.make_application(is_zero_combinator, var_n),
+        church_zero,
+        arena.make_application(var_f, arena.make_application(pred_combinator, var_n))
+    );
+    term = arena.make_abstraction(var_n, term);
+    auto const partial_func = arena.make_abstraction(var_f, term);
+
+    //term = arena.make_application(y_combinator, term);
+    //term = arena.make_application(term, make_church_numeral(2));
+
+    auto tmp = arena.make_application(partial_func, identity);
+    //term = arena.make_application(term, church_zero);
+
+    term = reduce_normal_order(arena, arena.make_application(tmp, church_zero));
+    std::cout << "inner func 0: " << TermPrinter(arena, term) << "\n\n";
+    term = reduce_normal_order(arena, arena.make_application(tmp, church_one));
+    std::cout << "inner func 1: " << TermPrinter(arena, term) << "\n\n";
+    term = reduce_normal_order(arena, arena.make_application(tmp, make_church_numeral(2)));
+    std::cout << "inner func 2: " << TermPrinter(arena, term) << "\n\n";
 }
