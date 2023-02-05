@@ -12,6 +12,8 @@ void serialize_term(TermArena const& arena, TermId root, std::ostream& stream);
 
 //--------------------------------------------------------------------------------------------------
 struct TermPrinter {
+    TermPrinter(TermArena const& arena, TermId root) : arena(arena), root(root) {}
+
     TermArena const& arena;
     TermId root;
 };

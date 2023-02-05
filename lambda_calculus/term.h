@@ -1,9 +1,10 @@
 #ifndef LAMBDA_TERM_H
 #define LAMBDA_TERM_H
 
+#include <optional>
+#include <stdexcept>
 #include <string_view>
 #include <variant>
-#include <stdexcept>
 #include "term_id.h"
 #include "utils/overloaded.h"
 
@@ -38,6 +39,8 @@ using LambdaVariant = std::variant<Variable, Abstraction, Application>;
 struct LambdaTerm {
     std::vector<TermId> parents;
     LambdaVariant data;
+
+    LambdaTerm(std::vector<TermId> p, LambdaVariant d): parents(std::move(p)), data(std::move(d)) {}
 
     template <typename... Visitors>
     constexpr decltype(auto) visit(Visitors&&... visitors) const {

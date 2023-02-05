@@ -1,6 +1,8 @@
 #include "term_reduction.h"
 #include "utils/stdint.h"
 #include "utils/visit.h"
+#include <array>
+#include <unordered_map>
 
 namespace lambda {
 
